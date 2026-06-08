@@ -1,0 +1,27 @@
+[
+  {
+    "id": "summarization",
+    "label": "Summarization",
+    "prompt": "Summarize this article in 3 bullet points."
+  },
+  {
+    "id": "classification",
+    "label": "Sentiment Classification",
+    "prompt": "Classify the sentiment of the following customer review as positive, negative, or neutral."
+  },
+  {
+    "id": "qa",
+    "label": "Question Answering",
+    "prompt": "Answer the user's question clearly and concisely using only the information given in the provided context."
+  },
+  {
+    "id": "code-generation",
+    "label": "Code Generation",
+    "prompt": "Write a Python function that solves the given problem, including a brief docstring and example usage."
+  },
+  {
+    "id": "data-extraction",
+    "label": "Data Extraction",
+    "prompt": "Extract all names, dates, and monetary amounts from the following text and return them as a structured list."
+  }
+]
