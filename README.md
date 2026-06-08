@@ -30,6 +30,20 @@ SQLITE HISTORY    --  every iteration's prompt, scores, critiques, and outputs
 DASHBOARD         --  live run view + score curves, prompt diffs, session comparison
 ```
 
+### Two ways to run it
+
+The optimization engine (`optimizer/`) is a single shared package with three front ends layered
+on top of it — pick whichever fits:
+
+| Front end | Stack | Best for |
+|---|---|---|
+| **PromptForge** (`server/` + `web/`) | FastAPI (REST + SSE) + Next.js | The primary, polished dashboard — live-streamed runs, score curves, prompt diffs, session history, all in a custom-designed UI. **Recommended.** |
+| **Streamlit dashboard** (`dashboard/`) | Streamlit + Plotly | A lightweight, zero-frontend-build alternative — same core views (new run + history/compare), one Python process, deploys to Streamlit Community Cloud. |
+| **CLI** (`optimize.py`) | argparse | Scripting, automation, CI, or just watching the loop in a terminal. |
+
+All three share the exact same `optimizer/` engine and the same SQLite history file — a session
+started from one shows up in the others.
+
 ### Why these design choices
 
 - **Multiple samples per iteration** — a single run is noisy; averaging several samples gives
@@ -53,8 +67,14 @@ optimizer/
   runner.py       Samples a candidate prompt N times concurrently
   pipeline.py     optimize_prompt() — the streaming generator that drives the loop
   storage.py      SQLite-backed session/iteration history + CSV export
+server/
+  main.py         FastAPI app — REST endpoints + a /api/optimize SSE stream over the engine
+web/
+  src/app/        Next.js (App Router) pages: optimizer, results, history, settings
+  src/components/ PromptForge design-system components (cards, tabs, score chart, diff view…)
+  src/lib/        Typed API client (incl. the SSE consumer), formatting & word-diff helpers
 dashboard/
-  app.py          Streamlit UI: live runs + history/compare
+  app.py          Streamlit UI: live runs + history/compare (lightweight alternative front end)
 presets/
   challenges.json Five starter prompts (summarization, classification, Q&A, codegen, extraction)
 tests/            Offline pytest suite (fake Anthropic clients, no API key needed)
@@ -70,6 +90,13 @@ pip install -r requirements.txt
 
 cp .env.example .env
 # then edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Only needed if you want to run **PromptForge** (the Next.js frontend) — the CLI, API, and
+Streamlit dashboard need nothing beyond the Python setup above:
+
+```bash
+cd web && npm install
 ```
 
 ## Usage
@@ -89,11 +116,46 @@ python optimize.py --prompt "Summarize this article in 3 bullets" --iters 5
 Each iteration prints its score and delta from the previous round, and is saved to
 `optimizer_history.db` (SQLite) as it completes.
 
-### Dashboard
+### PromptForge (FastAPI + Next.js) — recommended
+
+A two-process app: a FastAPI backend (`server/`) wraps the `optimizer` engine behind a small REST
+API and a Server-Sent-Events stream, and a Next.js frontend (`web/`) renders it as a
+warm-editorial dashboard — "PromptForge — Automated Prompt Optimizer".
+
+```bash
+# Terminal 1 — API on :8000 (serves REST + SSE; reads the same .env as the CLI)
+.venv/bin/uvicorn server.main:app --reload --port 8000
+
+# Terminal 2 — frontend on :3000 (proxies API calls to :8000 in dev)
+cd web && npm install && npm run dev
+```
+
+Then open **http://localhost:3000**:
+
+- **Prompt Optimizer** (`/`) — write or paste a prompt, tune iterations/samples with live cost &
+  time estimates, and hit *Run Optimization* to watch progress stream in over SSE in real time —
+  per-iteration sampling, judging, and rewriting — before landing on that run's results.
+- **Results & Analysis** (`/results`, `/results/[id]`) — a custom-built SVG score-improvement
+  curve, a clickable iteration log, and a tabbed detail panel: word-level **prompt diff**
+  (original vs. any iteration), **per-dimension eval scores** with the optimizer's critique, and
+  every **sample output** with its individual judge score.
+- **Session History** (`/history`) — a searchable, sortable table of every run with start/final
+  scores and deltas, plus per-row view / CSV export / rename / delete actions.
+- **Settings** (`/settings`) — a live read-only view of the server's model, evaluation, and
+  storage configuration (so it can never drift from the single `.env`-driven source of truth
+  shared with the CLI and the Streamlit dashboard).
+
+The `server/` and `web/` apps share the exact same `optimizer` engine, `OptimizerConfig`, and
+SQLite history file as the CLI and the Streamlit dashboard below — runs started from any of them
+show up in all the others.
+
+### Streamlit dashboard (lightweight alternative)
 
 ```bash
 streamlit run dashboard/app.py
 ```
+
+A single-process, zero-frontend-build alternative with the same core views:
 
 - **New Run** — start from one of five preset challenges or write your own prompt, watch a live
   iteration log and score curve as the loop runs, then see an original-vs-optimized diff.
@@ -124,9 +186,21 @@ pytest
 The full suite runs **offline** — every module is exercised against fake/scripted Anthropic
 clients, so no API key or network access is required to verify correctness.
 
-## Deploying the dashboard
+## Deploying
 
-The dashboard is a stateless Streamlit app over a single SQLite file, so it deploys cleanly to
+### PromptForge (FastAPI + Next.js)
+
+Two stateless processes over one SQLite file:
+
+1. **API** — run `uvicorn server.main:app --host 0.0.0.0 --port 8000` anywhere that can hold
+   `ANTHROPIC_API_KEY` and the `OPTIMIZER_DB_PATH` SQLite file (Fly.io, Render, a VM, etc.).
+2. **Frontend** — `cd web && npm run build && npm start`, or deploy to **Vercel**; point
+   `NEXT_PUBLIC_API_BASE` (see `web/src/lib/api.ts`) at your API's public URL and make sure its
+   CORS `allow_origins` (in `server/main.py`) includes the frontend's deployed origin.
+
+### Streamlit dashboard (legacy/lightweight)
+
+A stateless Streamlit app over the same SQLite file, so it deploys cleanly to
 **Streamlit Community Cloud**:
 
 1. Push this repo to GitHub.

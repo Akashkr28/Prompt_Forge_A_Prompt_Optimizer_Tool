@@ -5,6 +5,14 @@ venv/
 .env
 *.db
 *.csv
-.streamlit/
+.streamlit/secrets.toml
 .pytest_cache/
 .DS_Store
+.claude/scheduled_tasks.lock
+
+# Next.js frontend
+web/node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+web/*.tsbuildinfo

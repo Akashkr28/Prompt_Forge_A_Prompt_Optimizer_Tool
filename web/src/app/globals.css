@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* PromptForge design tokens — warm editorial palette: cream/paper surfaces,
+   terracotta + ink-blue accents, serif display type paired with mono data
+   and a clean grotesque body face. Mirrors the dashboard's visual identity
+   across the whole app so every screen reads as one product. */
+@theme inline {
+  --color-ink: #0e0f11;
+  --color-ink-line: #1e2025;
+  --color-paper: #f5f2ec;
+  --color-cream: #ede9e0;
+  --color-warm: #d8d0c0;
+  --color-muted: #9a9080;
+  --color-accent: #c8502a;
+  --color-accent-2: #2a6fc8;
+  --color-gold: #c8a02a;
+  --color-green: #2ac870;
+  --color-surface: #ffffff;
+  --color-border: #e0d8cc;
+
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-dm-mono);
+  --font-sans: var(--font-instrument-sans);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fadein {
+  animation: fadein 0.25s ease;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
