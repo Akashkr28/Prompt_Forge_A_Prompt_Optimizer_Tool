@@ -15,7 +15,14 @@ from __future__ import annotations
 import difflib
 import json
 import os
+import sys
 import tempfile
+from pathlib import Path
+
+# `streamlit run dashboard/app.py` only puts this file's directory on sys.path,
+# not the project root — add it so `optimizer` is importable regardless of how
+# (or from where) the app is launched, including on Streamlit Community Cloud.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import anthropic
 import plotly.graph_objects as go
@@ -100,22 +107,10 @@ def render_diff(original: str, final: str) -> None:
         st.info("The optimized prompt is identical to the original.")
         return
 
-    colored = []
-    for line in diff_lines:
-        if line.startswith("+++") or line.startswith("---"):
-            colored.append(f"**{line}**")
-        elif line.startswith("+"):
-            colored.append(f":green[{line}]")
-        elif line.startswith("-"):
-            colored.append(f":red[{line}]")
-        else:
-            colored.append(line)
-    st.markdown(
-        "<div style='font-family:monospace; white-space:pre-wrap; line-height:1.5'>"
-        + "<br>".join(colored)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+    # st.code's "diff" language gives us +/- syntax highlighting for free —
+    # far more robust than hand-rolling colored spans (which fight Streamlit's
+    # own `:color[...]` markdown directives once wrapped in raw HTML).
+    st.code("\n".join(diff_lines), language="diff")
 
 
 def iterations_csv_bytes(storage: Storage, session_id: int) -> bytes:
