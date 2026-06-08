@@ -89,40 +89,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* ─── Sidebar ─── */}
-      <nav className="sticky top-14 hidden h-[calc(100vh-56px)] flex-col gap-1 overflow-y-auto border-r border-ink-line bg-ink py-4 md:flex">
-        {NAV.map((group) => (
-          <div key={group.section}>
-            <div className="px-[18px] pb-1 pt-3 font-mono text-[9px] uppercase tracking-[0.1em] text-[#444]">
-              {group.section}
-            </div>
-            {group.items.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-[10px] border-l-2 px-[18px] py-2 font-sans text-[13px] transition-colors ${
-                    active
-                      ? "border-accent bg-[#141518] text-paper"
-                      : "border-transparent text-[#888] hover:bg-[#141518] hover:text-[#ccc]"
-                  }`}
-                >
-                  <span
-                    className={`h-[7px] w-[7px] flex-shrink-0 rounded-full ${
-                      active ? "bg-accent opacity-100" : "bg-current opacity-40"
+      {/* ─── Sidebar ───
+          Two layers on purpose: the outer <nav> has NO fixed height, so it
+          stretches to match the grid row's height (i.e. however tall <main>
+          ends up being) and its dark background runs continuously down the
+          full left edge — even on long pages like Results & Analysis. The
+          inner wrapper is what's actually `sticky`, pinned to the viewport
+          beneath the topbar, so the links themselves never scroll out of view. */}
+      <nav className="hidden border-r border-ink-line bg-ink md:block">
+        <div className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-1 overflow-y-auto py-4">
+          {NAV.map((group) => (
+            <div key={group.section}>
+              <div className="px-[18px] pb-1 pt-3 font-mono text-[9px] uppercase tracking-[0.1em] text-[#444]">
+                {group.section}
+              </div>
+              {group.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-[10px] border-l-2 px-[18px] py-2 font-sans text-[13px] transition-colors ${
+                      active
+                        ? "border-accent bg-[#141518] text-paper"
+                        : "border-transparent text-[#888] hover:bg-[#141518] hover:text-[#ccc]"
                     }`}
-                  />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                  >
+                    <span
+                      className={`h-[7px] w-[7px] flex-shrink-0 rounded-full ${
+                        active ? "bg-accent opacity-100" : "bg-current opacity-40"
+                      }`}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </nav>
 
       {/* ─── Main ─── */}
-      <main className="flex flex-col overflow-y-auto bg-paper">{children}</main>
+      <main className="flex flex-col bg-paper">{children}</main>
     </div>
   );
 }
