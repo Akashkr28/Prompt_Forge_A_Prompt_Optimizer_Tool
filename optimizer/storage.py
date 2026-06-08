@@ -117,6 +117,39 @@ class Storage:
             rows = conn.execute("SELECT * FROM sessions ORDER BY created_at DESC").fetchall()
         return [_row_to_session(row) for row in rows]
 
+    def rename_session(self, session_id: int, name: str | None) -> None:
+        with closing(self._connect()) as conn:
+            conn.execute("UPDATE sessions SET name = ? WHERE id = ?", (name, session_id))
+            conn.commit()
+
+    def delete_session(self, session_id: int) -> None:
+        """Delete a session and (via ``ON DELETE CASCADE``) all of its iterations."""
+        with closing(self._connect()) as conn:
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            conn.commit()
+
+    def get_summary_stats(self) -> dict:
+        """Headline numbers for the dashboard's landing view: how much optimizing
+        has happened, and how well it's gone."""
+        with closing(self._connect()) as conn:
+            session_count = conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+            iteration_count = conn.execute("SELECT COUNT(*) FROM iterations").fetchone()[0]
+            best_score = conn.execute("SELECT MAX(avg_total) FROM iterations").fetchone()[0]
+            avg_final_score = conn.execute(
+                """
+                SELECT AVG(avg_total) FROM iterations i
+                WHERE i.iteration = (
+                    SELECT MAX(iteration) FROM iterations WHERE session_id = i.session_id
+                )
+                """
+            ).fetchone()[0]
+        return {
+            "session_count": session_count,
+            "iteration_count": iteration_count,
+            "best_score": best_score,
+            "avg_final_score": avg_final_score,
+        }
+
     # -- iterations -------------------------------------------------------
 
     def save_iteration(self, session_id: int, record: dict) -> int:

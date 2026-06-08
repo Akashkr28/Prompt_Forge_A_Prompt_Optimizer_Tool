@@ -65,6 +65,51 @@ def test_save_and_get_iterations_roundtrip(storage):
     assert iterations[0].raw_scores[0]["critique"] == "needs more examples"
 
 
+def test_rename_session_updates_name(storage):
+    session_id = storage.create_session("p", "r", "o", "e", name="original name")
+
+    storage.rename_session(session_id, "new name")
+    assert storage.get_session(session_id).name == "new name"
+
+    storage.rename_session(session_id, None)
+    assert storage.get_session(session_id).name is None
+
+
+def test_delete_session_removes_session_and_its_iterations(storage):
+    keep_id = storage.create_session("keep", "r", "o", "e")
+    doomed_id = storage.create_session("doomed", "r", "o", "e")
+    storage.save_iteration(doomed_id, _record(1, avg_total=6.0))
+
+    storage.delete_session(doomed_id)
+
+    assert storage.get_session(doomed_id) is None
+    assert storage.get_iterations(doomed_id) == []
+    assert [s.id for s in storage.list_sessions()] == [keep_id]
+
+
+def test_get_summary_stats_aggregates_across_sessions(storage):
+    assert storage.get_summary_stats() == {
+        "session_count": 0,
+        "iteration_count": 0,
+        "best_score": None,
+        "avg_final_score": None,
+    }
+
+    first_id = storage.create_session("p1", "r", "o", "e")
+    storage.save_iteration(first_id, _record(1, avg_total=6.0))
+    storage.save_iteration(first_id, _record(2, avg_total=8.0))
+
+    second_id = storage.create_session("p2", "r", "o", "e")
+    storage.save_iteration(second_id, _record(1, avg_total=7.0))
+
+    stats = storage.get_summary_stats()
+    assert stats["session_count"] == 2
+    assert stats["iteration_count"] == 3
+    assert stats["best_score"] == 8.0
+    # average of each session's *last* iteration: (8.0 + 7.0) / 2
+    assert stats["avg_final_score"] == pytest.approx(7.5)
+
+
 def test_export_csv_writes_one_row_per_iteration(storage, tmp_path):
     session_id = storage.create_session("p", "r", "o", "e")
     storage.save_iteration(session_id, _record(1, avg_total=6.0))
