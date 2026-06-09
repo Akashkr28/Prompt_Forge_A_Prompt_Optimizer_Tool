@@ -32,11 +32,19 @@ PRESETS_PATH = os.path.join(os.path.dirname(__file__), "..", "presets", "challen
 
 app = FastAPI(title="Prompt Optimizer API")
 
-# The Next.js dev server runs on :3000; allow it (and the loopback variant) to
-# call this API directly during local development.
+# CORS origins are read from the ALLOWED_ORIGINS env var (comma-separated) so
+# the deployed API on Render can accept requests from the Vercel frontend.
+# Falls back to localhost dev origins when the var is not set.
+_allowed_origins = [
+    o.strip()
+    for o in os.environ.get(
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

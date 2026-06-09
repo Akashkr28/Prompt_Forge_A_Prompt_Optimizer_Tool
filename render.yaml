@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: promptforge-api
+    runtime: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Required — set this in the Render dashboard after creating the service
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Set this to your Vercel frontend URL after deploying (e.g. https://prompt-forge.vercel.app)
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Where the SQLite history file lives — must match the disk mountPath below
+      - key: OPTIMIZER_DB_PATH
+        value: /data/optimizer_history.db
+
+    # Persistent disk so session history survives redeploys and restarts.
+    # Costs ~$0.25/GB/month on Render's paid plans.
+    # Remove this block (and set OPTIMIZER_DB_PATH to optimizer_history.db)
+    # if you're on the free tier and ephemeral storage is acceptable.
+    disk:
+      name: promptforge-data
+      mountPath: /data
+      sizeGB: 1
